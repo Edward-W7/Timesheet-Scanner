@@ -34,25 +34,31 @@ def findline(trigger, lines):
         return val
 
 
+header = True
 path = input('Input your folder directory \n')
 dir_list = os.listdir(path)
+open(f'{path}/timesheetlog.csv', 'w')
 
 for filename in dir_list:
+    print('----------------------------')
     file = path + '/' + filename
     if file.endswith(".pdf"):
         pdfFileObj = open(file, 'rb')
         pdfReader = PyPDF2.PdfReader(pdfFileObj)
         text = pdfReader.pages[0].extract_text()
 
-        info = {
-            'days': findline("Unauthorized Additional \n", -1),
-            'name': findline('Resource Name\n', 2),
-            'month': findline('Month\n', 5),
-            'year': findline('Year\n', 5),
-            'filename': filename
-        }
+        with open(f'{path}/timesheetlog.csv', 'a') as csvfile:
+            fieldnames = ['filename', 'year', 'month', 'days', 'name']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if header:
+                info = {'name': 'Name',
+                        'days': 'Working Days',
+                        'month': 'Month',
+                        'year': 'Year',
+                        'filename': 'File Name'
+                        }
+                writer.writerow(info)
 
-        with open('/Users/edwardwang/Downloads/testsheet.csv', 'a') as csvfile:
             if 'Fee for Service (FFS) Resource Timesheet' not in text:
                 fieldnames = ['filename', 'year', 'month', 'days', 'name']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -60,18 +66,26 @@ for filename in dir_list:
                         'days': '',
                         'month': '',
                         'year': '',
-                        'filename': filename
+                        'filename': filename.encode('ascii', errors='replace').decode()
                         }
-                writer.writerow(info)
             else:
-                fieldnames = ['filename', 'year', 'month', 'days', 'name']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writerow(info)
+                info = {
+                    'days': findline("Unauthorized Additional \n", -1),
+                    'name': findline('Resource Name\n', 2),
+                    'month': findline('Month\n', 5),
+                    'year': findline('Year\n', 5),
+                    'filename': filename
+                }
+                for key, value in info.items():
+                    info[key] = value.encode('ascii', errors='replace').decode()
+
+            writer.writerow(info)
             csvfile.close()
 
+        header = False
         for key, value in info.items():
             print(f"{key}: {value}")
 
         pdfFileObj.close()
-    else:
+    elif not file.endswith('timesheetlog.csv'):
         print('given file was not a pdf')
