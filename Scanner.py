@@ -34,8 +34,17 @@ def findline(trigger, lines):
         return val
 
 
+def reversename(name):
+    if ',' not in name:
+        return name
+    else:
+        comma = name.find(',')
+        return name[(comma + 2):] + ' ' + name[:comma]
+
+
 header = True
 path = input('Input your folder directory \n')
+# path = '/Users/edwardwang/Desktop/test'
 dir_list = os.listdir(path)
 open(f'{path}/timesheetlog.csv', 'w')
 
@@ -48,10 +57,11 @@ for filename in dir_list:
         text = pdfReader.pages[0].extract_text()
 
         with open(f'{path}/timesheetlog.csv', 'a') as csvfile:
-            fieldnames = ['filename', 'year', 'month', 'days', 'name']
+            fieldnames = ['filename', 'year', 'month', 'days', 'name', 'formatname']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if header:
                 info = {'name': 'Name',
+                        'formatname': 'Formatted Name',
                         'days': 'Working Days',
                         'month': 'Month',
                         'year': 'Year',
@@ -60,13 +70,14 @@ for filename in dir_list:
                 writer.writerow(info)
 
             if 'Fee for Service (FFS) Resource Timesheet' not in text:
-                fieldnames = ['filename', 'year', 'month', 'days', 'name']
+                fieldnames = ['filename', 'year', 'month', 'days', 'name', 'formatname']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 info = {'name': 'This PDF is not a Timesheet',
+                        'formatname': '',
                         'days': '',
                         'month': '',
                         'year': '',
-                        'filename': filename.encode('ascii', errors='replace').decode()
+                        'filename': filename.encode('ascii', errors='replace').decode().strip()
                         }
             else:
                 info = {
@@ -76,8 +87,17 @@ for filename in dir_list:
                     'year': findline('Year\n', 5),
                     'filename': filename
                 }
+
+                if info['month'].isdigit():
+                    info['month'] = findline('Month\n', 4)
+                if not info['year'].isdigit():
+                    info['year'] = findline('Year\n', 4)
+                if 'Organization' in info['name']:
+                    info['name'] = findline('Resource Name\n', 2)
+
+                info['formatname'] = reversename(info['name'])
                 for key, value in info.items():
-                    info[key] = value.encode('ascii', errors='replace').decode()
+                    info[key] = value.encode('ascii', errors='replace').decode().strip()
 
             writer.writerow(info)
             csvfile.close()
