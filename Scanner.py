@@ -46,7 +46,8 @@ header = True
 path = input('Input your folder directory \n')
 # path = '/Users/edwardwang/Desktop/test'
 dir_list = os.listdir(path)
-open(f'{path}/timesheetlog.csv', 'w')
+with open(f'{path}/timesheetlog.csv', 'w') as csvfile:
+    csvfile.close()
 
 for filename in dir_list:
     print('----------------------------')
@@ -56,7 +57,7 @@ for filename in dir_list:
         pdfReader = PyPDF2.PdfReader(pdfFileObj)
         text = pdfReader.pages[0].extract_text()
 
-        with open(f'{path}/timesheetlog.csv', 'a') as csvfile:
+        with open(f'{path}/timesheetlog.csv', 'a', newline='\n') as csvfile:
             fieldnames = ['filename', 'year', 'month', 'days', 'name', 'formatname']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             if header:
@@ -70,8 +71,6 @@ for filename in dir_list:
                 writer.writerow(info)
 
             if 'Fee for Service (FFS) Resource Timesheet' not in text:
-                fieldnames = ['filename', 'year', 'month', 'days', 'name', 'formatname']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 info = {'name': 'This PDF is not a Timesheet',
                         'formatname': '',
                         'days': '',
@@ -93,12 +92,11 @@ for filename in dir_list:
                 if not info['year'].isdigit():
                     info['year'] = findline('Year\n', 4)
                 if 'Organization' in info['name']:
-                    info['name'] = findline('Resource Name\n', 2)
+                    info['name'] = findline('Resource Name\n', 1)
 
                 info['formatname'] = reversename(info['name'])
                 for key, value in info.items():
                     info[key] = value.encode('ascii', errors='replace').decode().strip()
-
             writer.writerow(info)
             csvfile.close()
 
