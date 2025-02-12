@@ -42,8 +42,47 @@ def reversename(name):
         return name[(comma + 2):] + ' ' + name[:comma]
 
 
+def get_info(version, text):
+    info = {
+        'report run': findline("REPORT RUN", 0)[10:],
+        'version': findline("REPORT RUN", 1),
+        'name': findline('Resource Name', 2),
+        'month': findline('Month\n', 5),
+        'year': findline('Year\n', 5),
+        'SOW number': findline('SOW Number\n', 2),
+        'filename': filename,
+        'hours': findline("Total Billable Days\n", -1)
+    }
+
+    # Use a dictionary to map versions to their specific "days" value.
+    days_mapping = {
+        'v1.5': findline("Unauthorized Additional", -1),
+        'v2.6': findline("Unauthorized Additional", -1),
+        'v2.8': text.splitlines()[-1],
+        'v2.9': text.splitlines()[-1]
+    }
+
+    # If the version is not found in days_mapping, default to text.splitlines()[-1]
+    info['days'] = days_mapping.get(version, text.splitlines()[-1])
+    if float(info['days']) != float(findline("Total Billable Days\n", -1)) / 7.25:
+        print("Warning: total days is not equal to total hours divided by 7.25")
+        print("Total hours:", findline('Total Billable Days\n', -1))
+    if info['month'].isdigit():
+        info['month'] = findline('Month\n', 4)
+    if not info['year'].isdigit():
+        info['year'] = findline('Year\n', 4)
+    if 'Organization' in info['name']:
+        info['name'] = findline('Resource Name\n', 1)
+    if ',' in info['SOW number']:
+        info['SOW number'] = ''
+    info['formatname'] = reversename(info['name'])
+    for key, value in info.items():
+        info[key] = value.encode('ascii', errors='replace').decode().strip()
+    return info
+
+
 header = True
-path = input('Input your folder directory \nTool version: 1.2 Build: 2024/11/14 \n')
+path = input('Input your folder directory \nTool version: 1.3 Build: 2025/2/11 \n')
 # path = '/Users/edwardwang/Desktop/test'
 dir_list = os.listdir(path)
 fileNotOpen = True
@@ -63,7 +102,7 @@ for filename in dir_list:
         pdfFileObj = open(file, 'rb')
         pdfReader = PyPDF2.PdfReader(pdfFileObj)
         text = pdfReader.pages[0].extract_text()
-        print(text)
+        # print(text)
         with open(f'{path}/timesheetlog.csv', 'a', newline='\n') as csvfile:
             fieldnames = ['formatname', 'year', 'month', 'days', 'hours', 'report run', 'version', 'name', 'filename',
                           'SOW number']
@@ -97,60 +136,11 @@ for filename in dir_list:
 
             else:
                 version = findline("REPORT RUN", 1)
-                if version == 'v2.6':
-                    info = {
-                        'report run': findline("REPORT RUN", 0)[10:],
-                        'version': findline("REPORT RUN", 1),
-                        'days': findline("Unauthorized Additional", -1),
-                        'name': findline('Resource Name', 2),
-                        'month': findline('Month\n', 5),
-                        'year': findline('Year\n', 5),
-                        'SOW number': findline('SOW Number\n', 2),
-                        'filename': filename,
-                        'hours': findline("Total Billable Days\n", -1)
-                    }
-                    if float(info['days']) != float(findline("Total Billable Days\n", -1)) / 7.25:
-                        print("Warning: total days is not equal to total hours divided by 7.25")
-                        print("Total hours:", findline('Total Billable Days\n', -1))
-                    if info['month'].isdigit():
-                        info['month'] = findline('Month\n', 4)
-                    if not info['year'].isdigit():
-                        info['year'] = findline('Year\n', 4)
-                    if 'Organization' in info['name']:
-                        info['name'] = findline('Resource Name\n', 1)
-                    if ',' in info['SOW number']:
-                        info['SOW number'] = ''
-                    info['formatname'] = reversename(info['name'])
-                    for key, value in info.items():
-                        info[key] = value.encode('ascii', errors='replace').decode().strip()
-                elif version == 'v2.8':
-                    info = {
-                        'report run': findline("REPORT RUN", 0)[10:],
-                        'version': findline("REPORT RUN", 1),
-                        'days': text.splitlines()[-1],
-                        'name': findline('Resource Name', 2),
-                        'month': findline('Month\n', 5),
-                        'year': findline('Year\n', 5),
-                        'SOW number': findline('SOW Number\n', 2),
-                        'filename': filename,
-                        'hours': findline("Total Billable Days\n", -1)
-                    }
-                    print(text.splitlines()[-1])
-                    if float(info['days']) != float(findline("Total Billable Days\n", -1)) / 7.25:
-                        print("Warning: total days is not equal to total hours divided by 7.25")
-                        print("Total hours:", findline('Total Billable Days\n', -1))
-                    if info['month'].isdigit():
-                        info['month'] = findline('Month\n', 4)
-                    if not info['year'].isdigit():
-                        info['year'] = findline('Year\n', 4)
-                    if 'Organization' in info['name']:
-                        info['name'] = findline('Resource Name\n', 1)
-                    if ',' in info['SOW number']:
-                        info['SOW number'] = ''
-                    info['formatname'] = reversename(info['name'])
-                    for key, value in info.items():
-                        info[key] = value.encode('ascii', errors='replace').decode().strip()
-            writer.writerow(info)
+                try:
+                    info = get_info(version, text)
+                    writer.writerow(info)
+                except Exception as e:
+                    print("file was formatted incorrectly, or new version:" + str(e))
             csvfile.close()
 
         header = False
