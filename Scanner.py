@@ -83,7 +83,6 @@ def get_info(version, text):
 
 header = True
 path = input('Input your folder directory \nTool version: 1.3 Build: 2025/2/11 \n')
-# path = '/Users/edwardwang/Desktop/test'
 dir_list = os.listdir(path)
 fileNotOpen = True
 while fileNotOpen:
